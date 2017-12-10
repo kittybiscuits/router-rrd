@@ -1,0 +1,5 @@
+ply==3.10
+pyasn1==0.4.2
+pycryptodomex==3.4.7
+pysmi==0.2.2
+pysnmp==4.4.2
