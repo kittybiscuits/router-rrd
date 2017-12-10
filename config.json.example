@@ -1,0 +1,23 @@
+{
+	"hostname": "10.0.0.1",
+	"port": 161,
+	"community": "public",
+	"timeout": 2,
+    "rrd_dir": "/var/www/html/rrd_data",
+    "png_dir": "/var/www/html/rrd_images",
+	"interfaces": {
+		"eth0": {
+			"short": "gw-ext",
+			"long": "Public - Internet"
+		},
+		"eth1": {
+			"short": "gw-int",
+			"long": "Private - Intranet"
+		},
+		"eth1.2": {
+			"short": "vlan2",
+			"long": "VLAN 2 - DMZ"
+		}
+	}
+}
+
