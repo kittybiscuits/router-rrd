@@ -53,16 +53,16 @@ sub Main {
 
 		CreateImage($config{'png_dir'}, $config{'rrd_dir'}, $filename, 'day',
 			$config{'png_width'}, $config{'png_height'},
-			"Traffic on $image_title");
+			"Traffic on $image_title (1 day, 5min avg)");
 		CreateImage($config{'png_dir'}, $config{'rrd_dir'}, $filename, 'week',
 			$config{'png_width'}, $config{'png_height'},
-			"Traffic on $image_title");
+			"Traffic on $image_title (1 week, 5min avg)");
 		CreateImage($config{'png_dir'}, $config{'rrd_dir'}, $filename, 'month',
 			$config{'png_width'}, $config{'png_height'},
-			"Traffic on $image_title");
+			"Traffic on $image_title (1 month, 5min avg)");
 		CreateImage($config{'png_dir'}, $config{'rrd_dir'}, $filename, 'year',
 			$config{'png_width'}, $config{'png_height'},
-			"Traffic on $image_title");
+			"Traffic on $image_title (1 year, 5min avg)");
 	}
 }
 
@@ -242,18 +242,22 @@ sub CreateImage {
 
 		"CDEF:out_neg=out,-1,*",
 		"CDEF:maxout_neg=maxout,-1,*",
+		"VDEF:in_total=in,TOTAL",
+		"VDEF:out_total=out,TOTAL",
 
 		"AREA:in#77dd77:Incoming",
 		"LINE1:maxin#009900",
 		"GPRINT:in:MAX:  Max\\: %6.1lf %s",
 		"GPRINT:in:AVERAGE: Avg\\: %6.1lf %S",
-		"GPRINT:in:LAST: Current\\: %6.1lf %SBytes/sec\\n",
+		"GPRINT:in:LAST: Current\\: %6.1lf %SBytes/sec",
+		"GPRINT:in_total:Total\\: %6.1lf %s\\n",
 
 		"AREA:out_neg#9bbae1:Outgoing",
 		"LINE1:maxout_neg#000099",
 		"GPRINT:maxout:MAX:  Max\\: %6.1lf %S",
 		"GPRINT:out:AVERAGE: Avg\\: %6.1lf %S",
-		"GPRINT:out:LAST: Current\\: %6.1lf %SBytes/sec\\n",
+		"GPRINT:out:LAST: Current\\: %6.1lf %SBytes/sec",
+		"GPRINT:out_total:Total\\: %6.1lf %s\\n",
 
 		"HRULE:0#000000",
 	);
