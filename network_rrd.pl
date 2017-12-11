@@ -19,13 +19,14 @@ use RRDs;
 use strict;
 use warnings;
 
-my $config = GetConfig();
-Main($config);
+CheckUsage();
+Main();
 exit 0;
 
 
 sub Main {
-	my %config = %{$_[0]};
+	my $config = GetConfig($ARGV[0]);
+	my %config = %{$config};
 
 	my $session = GetSnmpSession($config{'hostname'}, $config{'port'},
 		$config{'timeout'}, $config{'community'});
@@ -61,10 +62,18 @@ sub Main {
 	}
 }
 
+sub CheckUsage {
+	if (!defined($ARGV[0])) {
+		print "Usage: $0 <configFilename>\n";
+		exit 1;
+	}
+}
+
 sub GetConfig {
 	local $/ = undef;
+	my $configFilename = $_[0];
 
-	open (FILE, '<', 'config.json') or die "ERROR: Unable to open file: $!";
+	open (FILE, '<', $configFilename) or die "ERROR: Unable to open file: $!";
 	my $rawJson = <FILE>;
 	close FILE;
 
