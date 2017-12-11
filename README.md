@@ -23,8 +23,8 @@ If an interface is found on a router and it's not listed in `config.json`, the
 This script will identify all interfaces on a router and obtain the following info:
 
 - Interface description (`IF-MIB::ifDescr`)
-- Network traffic in (`IF-MIB::ifInOctets`)
-- Network traffic out (`IF-MIB::ifOutOctets`)
+- Network traffic in (`IF-MIB::ifHCInOctets`)
+- Network traffic out (`IF-MIB::ifHCOutOctets`)
 
 # Dependencies
 
