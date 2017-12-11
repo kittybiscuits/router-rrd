@@ -3,8 +3,10 @@
 	"port": 161,
 	"community": "public",
 	"timeout": 2,
-    "rrd_dir": "/var/www/html/rrd_data",
-    "png_dir": "/var/www/html/rrd_images",
+	"rrd_dir": "/var/www/html/rrd_data",
+	"png_dir": "/var/www/html/rrd_images",
+	"png_width": 1200,
+	"png_height": 400,
 	"interfaces": {
 		"eth0": {
 			"rrd_filename": "gw-ext",

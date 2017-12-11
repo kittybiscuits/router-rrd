@@ -52,12 +52,16 @@ sub Main {
 		UpdateRRD($config{'rrd_dir'}, $filename, $interfaceIn, $interfaceOut);
 
 		CreateImage($config{'png_dir'}, $config{'rrd_dir'}, $filename, 'day',
+			$config{'png_width'}, $config{'png_height'},
 			"Traffic on $image_title");
 		CreateImage($config{'png_dir'}, $config{'rrd_dir'}, $filename, 'week',
+			$config{'png_width'}, $config{'png_height'},
 			"Traffic on $image_title");
 		CreateImage($config{'png_dir'}, $config{'rrd_dir'}, $filename, 'month',
+			$config{'png_width'}, $config{'png_height'},
 			"Traffic on $image_title");
 		CreateImage($config{'png_dir'}, $config{'rrd_dir'}, $filename, 'year',
+			$config{'png_width'}, $config{'png_height'},
 			"Traffic on $image_title");
 	}
 }
@@ -211,7 +215,9 @@ sub CreateImage {
 	my $rrdDir = $_[1];
 	my $filenameWithoutExt = $_[2];
 	my $interval = $_[3];
-	my $title = $_[4];
+	my $width = $_[4];
+	my $height = $_[5];
+	my $title = $_[6];
 
 	my $imageFilename = "$imageDir/$filenameWithoutExt\_$interval.png";
 	my $rrdFilename = "$rrdDir/$filenameWithoutExt.rrd";
@@ -220,7 +226,7 @@ sub CreateImage {
 		"-s -1$interval",
 		"-t $title",
 		"--lazy",
-		"-h", "400", "-w", "1200",
+		"-h", $height, "-w", $width,
 		"-l 0",
 		"-a", "PNG",
 		"-v bytes/sec",
