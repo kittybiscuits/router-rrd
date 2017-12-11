@@ -1,19 +1,20 @@
 #!/usr/bin/env perl
 #
 # Get all available interfaces:
-#   snmpwalk -v1 -c public -m +UBNT-UniFi-MIB 10.0.0.1 .1.3.6.1.2.1.2.2.1.2
+#   snmpwalk -v2c -c public 10.0.0.1 .1.3.6.1.2.1.2.2.1.2
 #
 # Get interface #2 description:
-#   snmpget -v1 -c public -m +UBNT-UniFi-MIB 10.0.0.1 .1.3.6.1.2.1.2.2.1.2.2
+#   snmpget -v2c -c public 10.0.0.1 .1.3.6.1.2.1.2.2.1.2.2
 #
 # Get interface #2 packets in:
-#   snmpget -v1 -c public -m +UBNT-UniFi-MIB 10.0.0.1 .1.3.6.1.2.1.2.2.1.10.2
+#   snmpget -v2c -c public 10.0.0.1 .1.3.6.1.2.1.31.1.1.1.6.2
 #
 # Get interface #2 packets out:
-#   snmpget -v1 -c public -m +UBNT-UniFi-MIB 10.0.0.1 .1.3.6.1.2.1.2.2.1.16.2
+#   snmpget -v2c -c public 10.0.0.1 .1.3.6.1.2.1.31.1.1.1.10.2
 
 use Net::SNMP;
 use JSON::MaybeXS qw(decode_json);
+use RRDs;
 
 use strict;
 use warnings;
@@ -34,13 +35,29 @@ sub Main {
 	foreach my $oid (sort keys %discoveredInterfaces) {
 		my $numIndex = rindex($oid, '.') + 1;
 		my $interfaceNum = substr($oid, $numIndex);
+		my $interfaceDesc = $discoveredInterfaces{$oid};
+		my $interfaceIn = GetInterfaceIn($session, $interfaceNum);
+		my $interfaceOut = GetInterfaceOut($session, $interfaceNum);
 
 		printf("Interface #%-2s (%-8s)  In: %-12s Out: %s\n",
-			$interfaceNum,
-			$discoveredInterfaces{$oid},
-			GetInterfaceIn($session, $interfaceNum),
-			GetInterfaceOut($session, $interfaceNum),
-		);
+			$interfaceNum, $interfaceDesc, $interfaceIn, $interfaceOut);
+
+		my $filename = defined($config{'interfaces'}{$interfaceDesc}{'rrd_filename'}) ?
+			$config{'interfaces'}{$interfaceDesc}{'rrd_filename'} : $interfaceDesc;
+		my $image_title = defined($config{'interfaces'}{$interfaceDesc}{'rrd_title'}) ?
+			$config{'interfaces'}{$interfaceDesc}{'rrd_title'} : $interfaceDesc;
+
+		CreateRRD($config{'rrd_dir'}, $filename);
+		UpdateRRD($config{'rrd_dir'}, $filename, $interfaceIn, $interfaceOut);
+
+		CreateImage($config{'png_dir'}, $config{'rrd_dir'}, $filename, 'day',
+			"Traffic on $image_title");
+		CreateImage($config{'png_dir'}, $config{'rrd_dir'}, $filename, 'week',
+			"Traffic on $image_title");
+		CreateImage($config{'png_dir'}, $config{'rrd_dir'}, $filename, 'month',
+			"Traffic on $image_title");
+		CreateImage($config{'png_dir'}, $config{'rrd_dir'}, $filename, 'year',
+			"Traffic on $image_title");
 	}
 }
 
@@ -51,9 +68,9 @@ sub GetConfig {
 	my $rawJson = <FILE>;
 	close FILE;
 
-	my $config = decode_json($rawJson);
+	my $parsedConfig = decode_json($rawJson);
 
-	return $config;
+	return $parsedConfig;
 }
 
 sub GetSnmpSession {
@@ -65,6 +82,7 @@ sub GetSnmpSession {
 	my ($session, $error) = Net::SNMP->session(
 		-hostname  => $hostname,
 		-community => $community,
+		-version   => 2,
 		-timeout   => $timeout,
 		-port      => $port,
 	);
@@ -88,7 +106,8 @@ sub GetInterfaceDesc {
 sub GetInterfaceIn {
 	my $session = $_[0];
 	my $interfaceIndex = $_[1];
-	my $oid = '.1.3.6.1.2.1.2.2.1.10.' . $interfaceIndex;
+	# my $oid = '.1.3.6.1.2.1.2.2.1.10.' . $interfaceIndex; # 32 bit counter
+	my $oid = '.1.3.6.1.2.1.31.1.1.1.6.' . $interfaceIndex; # 64 bit counter
 
 	return SnmpGetRequest($session, $oid);
 }
@@ -96,7 +115,8 @@ sub GetInterfaceIn {
 sub GetInterfaceOut {
 	my $session = $_[0];
 	my $interfaceIndex = $_[1];
-	my $oid = '.1.3.6.1.2.1.2.2.1.16.' . $interfaceIndex;
+	# my $oid = '.1.3.6.1.2.1.2.2.1.16.' . $interfaceIndex; # 32 bit counter
+	my $oid = '.1.3.6.1.2.1.31.1.1.1.10.' . $interfaceIndex; # 64 bit counter
 
 	return SnmpGetRequest($session, $oid);
 }
@@ -132,5 +152,98 @@ sub GetInterfaceList {
 	}
 
 	return %returnData;
+}
+
+sub CreateRRD {
+	my $rrdDir = $_[0];
+	my $filenameWithoutExt = $_[1];
+
+	my $rrdFilename = "$rrdDir/$filenameWithoutExt.rrd";
+
+	if (!-e $rrdFilename) {
+		print "  Creating new RRD file: $rrdFilename\n";
+		RRDs::create($rrdFilename,
+			"-s", "300",
+			"DS:in:DERIVE:600:0:U",
+			"DS:out:DERIVE:600:0:U",
+			"RRA:AVERAGE:0.5:1:288", # 1 day, 5 min resolution
+			"RRA:MAX:0.5:1:288",
+			"RRA:AVERAGE:0.5:3:672", # 1 week, 15 min resolution
+			"RRA:MAX:0.5:3:672",
+			"RRA:AVERAGE:0.5:12:744", # 1 month, 1 hour resolution
+			"RRA:MAX:0.5:12:744",
+			"RRA:AVERAGE:0.5:72:1480", # 1 year, 6 hour resolution
+			"RRA:MAX:0.5:72:1480",
+		);
+
+		if (my $error = RRDs::error()) {
+			die "Failed to create RRD file: \"$rrdFilename\" -- $error\n";
+		}
+	}
+}
+
+sub UpdateRRD {
+	my $rrdDir = $_[0];
+	my $filenameWithoutExt = $_[1];
+	my $in = $_[2];
+	my $out = $_[3];
+
+	my $rrdFilename = "$rrdDir/$filenameWithoutExt.rrd";
+
+	RRDs::update($rrdFilename, "-t", "in:out", "N:$in:$out");
+
+	if (my $error = RRDs::error()) {
+		die "Failed to update RRD file: \"$rrdFilename\" -- $error\n";
+	}
+}
+
+sub CreateImage {
+	my $imageDir = $_[0];
+	my $rrdDir = $_[1];
+	my $filenameWithoutExt = $_[2];
+	my $interval = $_[3];
+	my $title = $_[4];
+
+	my $imageFilename = "$imageDir/$filenameWithoutExt\_$interval.png";
+	my $rrdFilename = "$rrdDir/$filenameWithoutExt.rrd";
+
+	RRDs::graph($imageFilename,
+		"-s -1$interval",
+		"-t $title",
+		"--lazy",
+		"-h", "400", "-w", "1200",
+		"-l 0",
+		"-a", "PNG",
+		"-v bytes/sec",
+		# "--slope-mode",
+		"--border", "0",
+		"--color", "BACK#ffffff",
+		"--color", "CANVAS#ffffff",
+		"--font", "LEGEND:7",
+		"DEF:in=$rrdFilename:in:AVERAGE",
+		"DEF:maxin=$rrdFilename:in:MAX",
+		"DEF:out=$rrdFilename:out:AVERAGE",
+		"DEF:maxout=$rrdFilename:out:MAX",
+
+		"CDEF:out_neg=out,-1,*",
+		"CDEF:maxout_neg=maxout,-1,*",
+
+		"AREA:in#77dd77:Incoming",
+		"LINE1:maxin#009900",
+		"GPRINT:in:MAX:  Max\\: %6.1lf %s",
+		"GPRINT:in:AVERAGE: Avg\\: %6.1lf %S",
+		"GPRINT:in:LAST: Current\\: %6.1lf %SBytes/sec\\n",
+
+		"AREA:out_neg#9bbae1:Outgoing",
+		"LINE1:maxout_neg#000099",
+		"GPRINT:maxout:MAX:  Max\\: %6.1lf %S",
+		"GPRINT:out:AVERAGE: Avg\\: %6.1lf %S",
+		"GPRINT:out:LAST: Current\\: %6.1lf %SBytes/sec\\n",
+
+		"HRULE:0#000000",
+	);
+	if (my $error = RRDs::error()) {
+		die "Failed to create PNG file: $imageFilename\" -- $error\n";
+	}
 }
 

@@ -7,16 +7,16 @@
     "png_dir": "/var/www/html/rrd_images",
 	"interfaces": {
 		"eth0": {
-			"short": "gw-ext",
-			"long": "Public - Internet"
+			"rrd_filename": "gw-ext",
+			"rrd_title": "Public - Internet"
 		},
 		"eth1": {
-			"short": "gw-int",
-			"long": "Private - Intranet"
+			"rrd_filename": "gw-int",
+			"rrd_title": "Private - Intranet"
 		},
 		"eth1.2": {
-			"short": "vlan2",
-			"long": "VLAN 2 - DMZ"
+			"rrd_filename": "vlan2",
+			"rrd_title": "VLAN 2 - DMZ"
 		}
 	}
 }
