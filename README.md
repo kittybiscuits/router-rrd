@@ -14,6 +14,10 @@ Listing all interfaces in the `config.json` file is not required.
 If an interface is found on a router and it's not listed in `config.json`, the
 `IF-MIB::ifDescr` value will be used in generated PNG files.
 
+# Usage
+
+	$ ./network_rrd.pl config.json
+
 # Details
 
 This script will identify all interfaces on a router and obtain the following info:
@@ -38,8 +42,4 @@ If you are using Debian, the above dependencies can be satisfied by installing t
 - libnet-snmp-perl
 - libjson-maybexs-perl
 - librrds-perl
-
-# TODO
-
-Make those pretty pictures.
 
